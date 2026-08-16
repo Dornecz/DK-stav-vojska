@@ -1,7 +1,7 @@
 (async function () {
     'use strict';
 
-    const SCRIPT_ID = 'dk-army-tool-v34';
+    const SCRIPT_ID = 'dk-army-tool-v33';
 
     const STORAGE_GROUP = 'dkArmyToolGroup';
     const STORAGE_TYPE = 'dkArmyToolType';
@@ -35,43 +35,6 @@
         Number(n || 0)
             .toLocaleString('cs-CZ');
 
-    const toCellNumber = cell => {
-        if (!cell) return 0;
-
-        const directText = [...cell.childNodes]
-            .filter(node => node.nodeType === Node.TEXT_NODE)
-            .map(node => node.nodeValue || '')
-            .join(' ')
-            .replace(/\u00a0/g, ' ')
-            .trim();
-
-        const candidates = [
-            directText,
-            cell.querySelector(':scope > a')?.textContent || '',
-            cell.querySelector(':scope > span')?.textContent || '',
-            cell.textContent || ''
-        ];
-
-        for (const raw of candidates) {
-            const text = String(raw || '')
-                .replace(/\u00a0/g, ' ')
-                .trim();
-
-            if (!text) continue;
-
-            if (/^\d+(?:[ .]\d{3})*$/.test(text)) {
-                return parseInt(text.replace(/[ .]/g, ''), 10) || 0;
-            }
-
-            const first = text.match(/\d+/);
-            if (first) {
-                return parseInt(first[0], 10) || 0;
-            }
-        }
-
-        return 0;
-    };
-
     const TYPES = {
 
         own: {
@@ -104,6 +67,7 @@
     };
 
     async function fetchDoc(url) {
+
         const response = await fetch(
             url,
             {
@@ -128,6 +92,7 @@
     }
 
     function getBaseUrl() {
+
         const current =
             new URL(location.href);
 
@@ -162,6 +127,7 @@
     }
 
     async function loadSummary(groupId) {
+
         const url = getBaseUrl();
 
         url.searchParams.set(
@@ -180,6 +146,7 @@
     }
 
     async function loadSupports(groupId) {
+
         const url = getBaseUrl();
 
         url.searchParams.set(
@@ -208,9 +175,11 @@
     }
 
     function findSummaryTable(doc) {
+
         return [
             ...doc.querySelectorAll('table')
         ].find(table => {
+
             const text =
                 normalize(
                     table.textContent
@@ -227,6 +196,7 @@
     }
 
     function findSupportTable(doc) {
+
         const tables =
             [
                 ...doc.querySelectorAll(
@@ -236,6 +206,7 @@
 
         let table =
             tables.find(t => {
+
                 const text =
                     normalize(
                         t.textContent
@@ -257,6 +228,7 @@
 
         table =
             tables.find(t => {
+
                 const checkboxes =
                     t.querySelectorAll(
                         'input[type="checkbox"]'
@@ -280,18 +252,21 @@
     }
 
     function extractUnits(table) {
+
         let best = [];
 
         for (
             const row
             of table.querySelectorAll('tr')
         ) {
+
             const units = [];
 
             for (
                 const img
                 of row.querySelectorAll('img')
             ) {
+
                 const src =
                     img.src || '';
 
@@ -315,6 +290,7 @@
                         u => u.key === key
                     )
                 ) {
+
                     units.push({
                         key,
                         icon: src,
@@ -338,11 +314,13 @@
     }
 
     function detectRowType(cells) {
+
         for (
             let i = 0;
             i < cells.length;
             i++
         ) {
+
             const text =
                 normalize(
                     cells[i].textContent
@@ -352,9 +330,11 @@
                 const [key, def]
                 of Object.entries(TYPES)
             ) {
+
                 if (
                     def.matches.includes(text)
                 ) {
+
                     return {
                         type: key,
                         index: i
@@ -370,6 +350,7 @@
         doc,
         requestedType
     ) {
+
         const table =
             findSummaryTable(doc);
 
@@ -399,6 +380,7 @@
             const row
             of table.querySelectorAll('tr')
         ) {
+
             const cells =
                 [
                     ...row.querySelectorAll(
@@ -440,9 +422,10 @@
 
             troopCells.forEach(
                 (cell, index) => {
+
                     sums[index] +=
-                        toCellNumber(
-                            cell
+                        toNumber(
+                            cell.textContent
                         );
                 }
             );
@@ -456,6 +439,7 @@
     }
 
     function parseSupports(doc) {
+
         const table =
             findSupportTable(doc);
 
@@ -482,6 +466,7 @@
             const tr
             of table.querySelectorAll('tr')
         ) {
+
             const cells =
                 [
                     ...tr.querySelectorAll(
@@ -514,6 +499,7 @@
                 second ===
                 've vesnici'
             ) {
+
                 sourceVillage =
                     first;
 
@@ -542,6 +528,7 @@
                 !/\(\d{1,3}\|\d{1,3}\)/
                     .test(target)
             ) {
+
                 target = '';
 
                 for (
@@ -552,6 +539,7 @@
                     );
                     i++
                 ) {
+
                     const candidate =
                         cleanText(
                             cells[i]
@@ -562,6 +550,7 @@
                         /\(\d{1,3}\|\d{1,3}\)/
                             .test(candidate)
                     ) {
+
                         target =
                             candidate;
 
@@ -604,8 +593,8 @@
             const values =
                 troopCells.map(
                     cell =>
-                        toCellNumber(
-                            cell
+                        toNumber(
+                            cell.textContent
                         )
                 );
 
@@ -644,12 +633,14 @@
             const support
             of rawSupports
         ) {
+
             const key =
                 support.coords;
 
             if (
                 !grouped.has(key)
             ) {
+
                 grouped.set(
                     key,
                     {
@@ -717,6 +708,7 @@
                     currentDistance
                 )
             ) {
+
                 group.distance =
                     support.distance;
             }
@@ -724,6 +716,7 @@
             support.values
                 .forEach(
                     (value, index) => {
+
                         group.values[index] +=
                             value;
                     }
@@ -739,6 +732,7 @@
     }
 
     function extractGroups(doc) {
+
         const groups = [
             {
                 id: '0',
@@ -752,7 +746,9 @@
                 'a[href*="group="]'
             )
         ) {
+
             try {
+
                 const url =
                     new URL(
                         a.href,
@@ -778,6 +774,7 @@
                         g => g.id === id
                     )
                 ) {
+
                     groups.push({
                         id,
                         name
@@ -796,6 +793,7 @@
     };
 
     function sortSupports(data) {
+
         const sorted =
             [...data.supports];
 
@@ -807,10 +805,12 @@
 
         sorted.sort(
             (a, b) => {
+
                 if (
                     supportSort.column ===
                     'target'
                 ) {
+
                     return (
                         a.target.localeCompare(
                             b.target,
@@ -832,6 +832,7 @@
                     supportSort.column ===
                     'count'
                 ) {
+
                     valueA =
                         a.supportCount;
 
@@ -843,6 +844,7 @@
                     supportSort.column ===
                     'distance'
                 ) {
+
                     valueA =
                         parseFloat(
                             String(
@@ -866,6 +868,7 @@
                             'unit-'
                         )
                 ) {
+
                     const index =
                         parseInt(
                             supportSort.column
@@ -889,6 +892,7 @@
                     valueA <
                     valueB
                 ) {
+
                     return (
                         -1 *
                         direction
@@ -899,6 +903,7 @@
                     valueA >
                     valueB
                 ) {
+
                     return (
                         1 *
                         direction
@@ -922,6 +927,7 @@
     }
 
     function sortArrow(column) {
+
         if (
             supportSort.column !==
             column
@@ -946,8 +952,12 @@
         SCRIPT_ID;
 
     box.innerHTML = `
+
         <div class="dk-head">
-            <span>Stav vojska</span>
+
+            <span>
+                Stav vojska
+            </span>
 
             <button
                 class="dk-max"
@@ -962,18 +972,27 @@
             >
                 ×
             </button>
+
         </div>
 
         <div class="dk-body">
 
             <div class="dk-row">
-                <label>Skupina:</label>
 
-                <select class="dk-group">
+                <label>
+                    Skupina:
+                </label>
+
+                <select
+                    class="dk-group"
+                >
+
                     <option value="0">
                         Všechny
                     </option>
+
                 </select>
+
             </div>
 
             <div class="dk-tabs">
@@ -994,12 +1013,19 @@
 
             </div>
 
-            <div class="dk-summary-controls">
+            <div
+                class="dk-summary-controls"
+            >
 
                 <div class="dk-row">
-                    <label>Druh:</label>
 
-                    <select class="dk-type">
+                    <label>
+                        Druh:
+                    </label>
+
+                    <select
+                        class="dk-type"
+                    >
 
                         <option value="own">
                             Vlastní
@@ -1022,6 +1048,7 @@
                         </option>
 
                     </select>
+
                 </div>
 
             </div>
@@ -1067,16 +1094,20 @@
                 >
                 </div>
 
-                <div class="dk-scroll">
+                <div
+                    class="dk-scroll"
+                >
 
                     <table
                         class="dk-support-table"
                     >
+
                         <thead>
                         </thead>
 
                         <tbody>
                         </tbody>
+
                     </table>
 
                 </div>
@@ -1110,29 +1141,43 @@
         );
 
     style.textContent = `
+
         #${SCRIPT_ID} {
+
             position: fixed;
+
             top: 60px;
+
             left: 50%;
-            transform: translateX(-50%);
+
+            transform:
+                translateX(-50%);
+
             z-index: 999999;
 
             width: 800px;
+
             height: 620px;
 
             min-width: 520px;
+
             min-height: 360px;
 
             max-width: 96vw;
+
             max-height: 92vh;
 
             resize: both;
+
             overflow: hidden;
 
             background: #f4e4ba;
+
             color: #3b2412;
 
-            border: 2px solid #7b4d20;
+            border:
+                2px solid #7b4d20;
+
             border-radius: 7px;
 
             box-shadow:
@@ -1146,15 +1191,24 @@
         }
 
         #${SCRIPT_ID} .dk-head {
+
             position: relative;
+
             height: 42px;
-            box-sizing: border-box;
+
+            box-sizing:
+                border-box;
 
             display: flex;
-            justify-content: center;
-            align-items: center;
+
+            justify-content:
+                center;
+
+            align-items:
+                center;
 
             font-size: 18px;
+
             font-weight: bold;
 
             background: #c89952;
@@ -1163,42 +1217,60 @@
                 2px solid #7b4d20;
 
             cursor: move;
+
             user-select: none;
         }
 
         #${SCRIPT_ID} .dk-max {
+
             position: absolute;
+
             right: 38px;
+
             top: 7px;
 
             width: 26px;
+
             height: 26px;
 
             border: 0;
-            background: transparent;
+
+            background:
+                transparent;
 
             font-size: 19px;
+
             font-weight: bold;
+
             cursor: pointer;
         }
 
         #${SCRIPT_ID} .dk-close {
+
             position: absolute;
+
             right: 7px;
+
             top: 4px;
 
             width: 28px;
+
             height: 28px;
 
             border: 0;
-            background: transparent;
+
+            background:
+                transparent;
 
             font-size: 23px;
+
             font-weight: bold;
+
             cursor: pointer;
         }
 
         #${SCRIPT_ID} .dk-body {
+
             height:
                 calc(100% - 42px);
 
@@ -1208,19 +1280,23 @@
             padding: 10px;
 
             display: flex;
+
             flex-direction: column;
 
             overflow: hidden;
         }
 
         #${SCRIPT_ID} .dk-row {
+
             display: grid;
 
             grid-template-columns:
                 90px 1fr;
 
             gap: 6px;
-            align-items: center;
+
+            align-items:
+                center;
 
             margin-bottom: 7px;
 
@@ -1228,16 +1304,22 @@
         }
 
         #${SCRIPT_ID} label {
+
             font-weight: bold;
         }
 
         #${SCRIPT_ID} select {
+
             width: 100%;
-            box-sizing: border-box;
+
+            box-sizing:
+                border-box;
+
             padding: 5px;
         }
 
         #${SCRIPT_ID} .dk-tabs {
+
             display: grid;
 
             grid-template-columns:
@@ -1251,6 +1333,7 @@
         }
 
         #${SCRIPT_ID} .dk-tab {
+
             padding: 7px;
 
             border:
@@ -1260,21 +1343,26 @@
                 #e8ca82;
 
             font-weight: bold;
+
             cursor: pointer;
         }
 
         #${SCRIPT_ID} .dk-tab.active {
+
             background:
                 #c89952;
         }
 
         #${SCRIPT_ID}
         .dk-summary-controls {
+
             flex-shrink: 0;
         }
 
         #${SCRIPT_ID} .dk-status {
+
             min-height: 18px;
+
             line-height: 18px;
 
             text-align: center;
@@ -1286,10 +1374,12 @@
 
         #${SCRIPT_ID}
         .dk-summary-view {
+
             overflow: auto;
         }
 
         #${SCRIPT_ID} .dk-units {
+
             display: grid;
 
             grid-template-columns:
@@ -1311,17 +1401,22 @@
         }
 
         #${SCRIPT_ID} .dk-unit {
+
             min-height: 29px;
 
             display: flex;
+
             align-items: center;
 
             font-size: 15px;
+
             font-weight: bold;
         }
 
         #${SCRIPT_ID} .dk-unit img {
+
             width: 24px;
+
             height: 24px;
 
             object-fit:
@@ -1332,10 +1427,13 @@
 
         #${SCRIPT_ID}
         .dk-support-view {
+
             flex: 1;
+
             min-height: 0;
 
             display: flex;
+
             flex-direction: column;
 
             overflow: hidden;
@@ -1343,7 +1441,9 @@
 
         #${SCRIPT_ID}
         .dk-support-totals {
+
             display: flex;
+
             flex-wrap: wrap;
 
             gap:
@@ -1362,7 +1462,9 @@
 
         #${SCRIPT_ID}
         .dk-support-total {
+
             display: flex;
+
             align-items: center;
 
             gap: 4px;
@@ -1372,12 +1474,15 @@
 
         #${SCRIPT_ID}
         .dk-support-total img {
+
             width: 21px;
+
             height: 21px;
         }
 
         #${SCRIPT_ID}
         .dk-support-info {
+
             padding:
                 5px 2px;
 
@@ -1387,7 +1492,9 @@
         }
 
         #${SCRIPT_ID} .dk-scroll {
+
             flex: 1;
+
             min-height: 150px;
 
             overflow: auto;
@@ -1401,6 +1508,7 @@
 
         #${SCRIPT_ID}
         .dk-support-table {
+
             width: 100%;
 
             border-collapse:
@@ -1417,6 +1525,7 @@
 
         #${SCRIPT_ID}
         .dk-support-table td {
+
             border:
                 1px solid #d6ba7a;
 
@@ -1429,13 +1538,17 @@
 
         #${SCRIPT_ID}
         .dk-support-table thead {
+
             position: sticky;
+
             top: 0;
+
             z-index: 5;
         }
 
         #${SCRIPT_ID}
         .dk-support-table th {
+
             background:
                 #d6ad62;
         }
@@ -1445,7 +1558,9 @@
 
         #${SCRIPT_ID}
         .dk-support-table td:first-child {
+
             text-align: left;
+
             min-width: 210px;
         }
 
@@ -1454,45 +1569,61 @@
 
         #${SCRIPT_ID}
         .dk-support-table td:nth-child(2) {
+
             min-width: 60px;
         }
 
         #${SCRIPT_ID}
         .dk-support-table th img {
+
             width: 20px;
+
             height: 20px;
+
             vertical-align: middle;
         }
 
         #${SCRIPT_ID}
         .dk-support-table tbody tr:hover {
+
             background:
                 #ead49c;
         }
 
         #${SCRIPT_ID}
         .dk-sortable {
+
             cursor: pointer;
+
             user-select: none;
         }
 
         #${SCRIPT_ID}
         .dk-sortable:hover {
+
             background:
                 #c89c4d;
         }
 
         #${SCRIPT_ID}
         .dk-sort-arrow {
+
             font-size: 9px;
+
             margin-left: 2px;
+
             vertical-align: middle;
         }
 
         #${SCRIPT_ID} .dk-bottom {
+
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+
+            justify-content:
+                space-between;
+
+            align-items:
+                center;
 
             gap: 10px;
 
@@ -1503,12 +1634,15 @@
 
         #${SCRIPT_ID}
         .dk-bottom button {
+
             padding:
                 5px 10px;
 
             font-weight: bold;
+
             cursor: pointer;
         }
+
     `;
 
     document.head
@@ -1604,6 +1738,7 @@
     }
 
     function populateGroups(groups) {
+
         const saved =
             localStorage.getItem(
                 STORAGE_GROUP
@@ -1614,6 +1749,7 @@
 
         groups.forEach(
             group => {
+
                 const option =
                     document.createElement(
                         'option'
@@ -1641,16 +1777,19 @@
                     saved
             )
         ) {
+
             groupSelect.value =
                 saved;
 
         } else {
+
             groupSelect.value =
                 '0';
         }
     }
 
     async function ensureGroups() {
+
         if (groupsLoaded) {
             return;
         }
@@ -1669,6 +1808,7 @@
     }
 
     async function renderSummary() {
+
         status.textContent =
             'Načítám souhrn…';
 
@@ -1679,6 +1819,7 @@
             '';
 
         try {
+
             await ensureGroups();
 
             const groupId =
@@ -1699,6 +1840,7 @@
             summaryData.units
                 .forEach(
                     (unit, index) => {
+
                         const div =
                             document.createElement(
                                 'div'
@@ -1745,9 +1887,12 @@
                 );
 
             villageCount.textContent =
+
                 'Celkem ' +
+
                 summaryData
                     .villageCount +
+
                 ' vesnic';
 
             localStorage.setItem(
@@ -1764,6 +1909,7 @@
                 'Hotovo';
 
         } catch (error) {
+
             console.error(error);
 
             status.textContent =
@@ -1773,6 +1919,7 @@
     }
 
     function renderSupportHeader() {
+
         if (!supportData) {
             return;
         }
@@ -1786,6 +1933,7 @@
             title,
             column
         ) {
+
             const th =
                 document.createElement(
                     'th'
@@ -1848,6 +1996,7 @@
         supportData.units
             .forEach(
                 (unit, index) => {
+
                     const column =
                         'unit-' + index;
 
@@ -1919,21 +2068,26 @@
     }
 
     function changeSort(column) {
+
         if (
             supportSort.column ===
             column
         ) {
+
             supportSort.direction =
+
                 supportSort.direction ===
                 'asc'
                     ? 'desc'
                     : 'asc';
 
         } else {
+
             supportSort.column =
                 column;
 
             supportSort.direction =
+
                 column ===
                 'target'
                     ? 'asc'
@@ -1941,10 +2095,12 @@
         }
 
         renderSupportHeader();
+
         renderSupportRows();
     }
 
     function renderSupportRows() {
+
         if (!supportData) {
             return;
         }
@@ -1959,6 +2115,7 @@
 
         sorted.forEach(
             support => {
+
                 const tr =
                     document.createElement(
                         'tr'
@@ -2008,6 +2165,7 @@
                 support.values
                     .forEach(
                         value => {
+
                             const td =
                                 document.createElement(
                                     'td'
@@ -2033,6 +2191,7 @@
     }
 
     async function renderSupports() {
+
         status.textContent =
             'Načítám podpory…';
 
@@ -2052,6 +2211,7 @@
             '';
 
         try {
+
             await ensureGroups();
 
             const groupId =
@@ -2077,12 +2237,14 @@
             supportData.supports
                 .forEach(
                     support => {
+
                         support.values
                             .forEach(
                                 (
                                     value,
                                     index
                                 ) => {
+
                                     totals[index] +=
                                         value;
                                 }
@@ -2093,6 +2255,7 @@
             supportData.units
                 .forEach(
                     (unit, index) => {
+
                         const div =
                             document.createElement(
                                 'div'
@@ -2138,19 +2301,26 @@
                 );
 
             supportInfo.textContent =
+
                 'Jednotlivých podpor: ' +
+
                 supportData
                     .rawSupports.length +
+
                 ' | Cílových vesnic: ' +
+
                 supportData
                     .supports.length;
 
             renderSupportHeader();
+
             renderSupportRows();
 
             supportCount.textContent =
+
                 supportData
                     .supports.length +
+
                 ' cílových vesnic';
 
             localStorage.setItem(
@@ -2162,6 +2332,7 @@
                 'Hotovo';
 
         } catch (error) {
+
             console.error(error);
 
             status.textContent =
@@ -2173,6 +2344,7 @@
     async function switchMode(
         mode
     ) {
+
         currentMode =
             mode;
 
@@ -2180,6 +2352,7 @@
             '.dk-tab'
         ).forEach(
             button => {
+
                 button.classList.toggle(
                     'active',
                     button.dataset.mode ===
@@ -2192,6 +2365,7 @@
             mode ===
             'summary'
         ) {
+
             summaryControls.style.display =
                 '';
 
@@ -2204,6 +2378,7 @@
             await renderSummary();
 
         } else {
+
             summaryControls.style.display =
                 'none';
 
@@ -2221,6 +2396,7 @@
         '.dk-tab'
     ).forEach(
         button => {
+
             button.addEventListener(
                 'click',
                 () =>
@@ -2234,13 +2410,16 @@
     groupSelect.addEventListener(
         'change',
         async () => {
+
             if (
                 currentMode ===
                 'summary'
             ) {
+
                 await renderSummary();
 
             } else {
+
                 await renderSupports();
             }
         }
@@ -2256,6 +2435,7 @@
     ).addEventListener(
         'click',
         async () => {
+
             if (!summaryData) {
                 return;
             }
@@ -2285,25 +2465,31 @@
             summaryData.units
                 .forEach(
                     (unit, index) => {
+
                         text +=
                             '[unit]' +
                             unit.key +
                             '[/unit] ' +
+
                             fmt(
                                 summaryData
                                     .sums[index]
                             ) +
+
                             '\n';
                     }
                 );
 
             text +=
                 '\n[b]Celkem ' +
+
                 summaryData
                     .villageCount +
+
                 ' vesnic[/b]';
 
             try {
+
                 await navigator
                     .clipboard
                     .writeText(
@@ -2314,6 +2500,7 @@
                     'Export zkopírován';
 
             } catch (_) {
+
                 prompt(
                     'Zkopíruj export:',
                     text
@@ -2327,6 +2514,7 @@
     ).addEventListener(
         'click',
         async () => {
+
             if (!supportData) {
                 return;
             }
@@ -2338,6 +2526,7 @@
                 supportData
             ).forEach(
                 support => {
+
                     text +=
                         '[b]' +
                         support.target +
@@ -2351,6 +2540,7 @@
                     if (
                         support.distance
                     ) {
+
                         text +=
                             'Vzdálenost: ' +
                             support.distance +
@@ -2363,6 +2553,7 @@
                                 unit,
                                 index
                             ) => {
+
                                 const amount =
                                     support
                                         .values[index];
@@ -2387,6 +2578,7 @@
             );
 
             try {
+
                 await navigator
                     .clipboard
                     .writeText(
@@ -2397,6 +2589,7 @@
                     'Export zkopírován';
 
             } catch (_) {
+
                 prompt(
                     'Zkopíruj export:',
                     text
@@ -2426,11 +2619,14 @@
     maxButton.addEventListener(
         'click',
         () => {
+
             if (!maximized) {
+
                 const rect =
                     box.getBoundingClientRect();
 
                 oldBoxState = {
+
                     left:
                         rect.left +
                         'px',
@@ -2473,6 +2669,7 @@
                     true;
 
             } else {
+
                 box.style.transform =
                     'none';
 
@@ -2525,6 +2722,7 @@
     header.addEventListener(
         'mousedown',
         event => {
+
             if (
                 event.target
                     .closest('button')
@@ -2568,6 +2766,7 @@
     document.addEventListener(
         'mousemove',
         event => {
+
             if (!dragging) {
                 return;
             }
@@ -2607,6 +2806,7 @@
     document.addEventListener(
         'mouseup',
         () => {
+
             dragging =
                 false;
         }
