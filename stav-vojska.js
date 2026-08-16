@@ -1,7 +1,7 @@
 (async function () {
     'use strict';
 
-    const SCRIPT_ID = 'dk-army-tool-v331';
+    const SCRIPT_ID = 'dk-army-tool-v34-test';
 
     const STORAGE_GROUP = 'dkArmyToolGroup';
     const STORAGE_TYPE = 'dkArmyToolType';
@@ -22,30 +22,26 @@
             .trim();
 
     const toNumber = s => {
-        let text =
+
+        const text =
             String(s || '')
                 .replace(/\u00a0/g, ' ')
                 .trim();
 
+        if (!text) {
+            return 0;
+        }
+
         /*
-         * Některé účty DK zobrazují např.:
-         *
-         * 12215 (30)
-         * 0 (30)
-         *
-         * Číslo v závorce není počet jednotek
-         * a nesmí se přičíst.
+         * DK může na některých zařízeních zobrazit např.
+         * "12215 (30)". Číslo v závorce není stav vojska.
          */
-        text =
+        const beforeBracket =
             text.split('(')[0]
                 .trim();
 
-        /*
-         * Vezmeme pouze první číselnou hodnotu.
-         * Podporuje i formát 12 215.
-         */
         const match =
-            text.match(
+            beforeBracket.match(
                 /\d[\d\s.]*/
             );
 
@@ -282,6 +278,121 @@
         return table || null;
     }
 
+    function getUnitKeyFromElement(element) {
+
+        if (!element) {
+            return null;
+        }
+
+        const candidates = [
+            element.getAttribute?.('data-unit'),
+            element.getAttribute?.('data-unit-id'),
+            element.className,
+            element.id,
+            element.getAttribute?.('src'),
+            element.getAttribute?.('href'),
+            element.getAttribute?.('title'),
+            element.getAttribute?.('alt')
+        ]
+            .filter(Boolean)
+            .map(String);
+
+        for (const value of candidates) {
+
+            let match =
+                value.match(
+                    /unit[_-]([a-z0-9_]+)/i
+                );
+
+            if (match) {
+                return match[1]
+                    .replace(/\.(png|gif|webp).*$/i, '');
+            }
+
+            match =
+                value.match(
+                    /units\/([a-z0-9_]+)/i
+                );
+
+            if (match) {
+                return match[1]
+                    .replace(/\.(png|gif|webp).*$/i, '');
+            }
+        }
+
+        return null;
+    }
+
+
+    function getKnownUnitKeys() {
+
+        const candidates = [
+            window.game_data?.units,
+            window.GameData?.units,
+            window.TribalWars?.game_data?.units
+        ];
+
+        for (const value of candidates) {
+
+            if (
+                Array.isArray(value) &&
+                value.length
+            ) {
+
+                return value
+                    .map(unit =>
+                        typeof unit === 'string'
+                            ? unit
+                            : unit?.id ||
+                              unit?.name ||
+                              unit?.key
+                    )
+                    .filter(Boolean);
+            }
+        }
+
+        /*
+         * Pouze poslední záloha. Skutečný seznam se přednostně
+         * bere z game_data konkrétního světa.
+         */
+        return [
+            'spear',
+            'sword',
+            'axe',
+            'archer',
+            'spy',
+            'light',
+            'marcher',
+            'heavy',
+            'ram',
+            'catapult',
+            'knight',
+            'snob',
+            'militia'
+        ];
+    }
+
+
+    function unitIconFallback(key) {
+
+        const existing =
+            document.querySelector(
+                `img[src*="unit_${key}."], img[src*="/units/${key}."]`
+            );
+
+        if (existing?.src) {
+            return existing.src;
+        }
+
+        return (
+            location.origin +
+            '/graphic/unit/unit_' +
+            key +
+            '.png'
+        );
+    }
+
+
     function extractUnits(table) {
 
         let best = [];
@@ -291,47 +402,80 @@
             of table.querySelectorAll('tr')
         ) {
 
+            const cells =
+                [
+                    ...row.querySelectorAll(
+                        ':scope > th, :scope > td'
+                    )
+                ];
+
             const units = [];
 
-            for (
-                const img
-                of row.querySelectorAll('img')
-            ) {
+            cells.forEach(
+                (cell, cellIndex) => {
 
-                const src =
-                    img.src || '';
+                    let found = null;
 
-                const match =
-                    src.match(
-                        /unit_([a-z0-9_]+)\.(?:png|gif|webp)/i
-                    ) ||
-                    src.match(
-                        /units\/([a-z0-9_]+)\.(?:png|gif|webp)/i
-                    );
+                    const elements = [
+                        cell,
+                        ...cell.querySelectorAll('*')
+                    ];
 
-                if (!match) {
-                    continue;
+                    for (const element of elements) {
+
+                        const key =
+                            getUnitKeyFromElement(
+                                element
+                            );
+
+                        if (!key) {
+                            continue;
+                        }
+
+                        const img =
+                            element.tagName === 'IMG'
+                                ? element
+                                : element.querySelector?.('img');
+
+                        found = {
+                            key,
+                            icon:
+                                img?.src ||
+                                unitIconFallback(key),
+
+                            title:
+                                img?.title ||
+                                img?.alt ||
+                                element.getAttribute?.('title') ||
+                                key,
+
+                            /*
+                             * Použijeme jen pokud řádek hlavičky nemá colspan.
+                             */
+                            cellIndex:
+                                cells.every(
+                                    c =>
+                                        Number(c.colSpan || 1) === 1
+                                )
+                                    ? cellIndex
+                                    : null
+                        };
+
+                        break;
+                    }
+
+                    if (
+                        found &&
+                        !units.some(
+                            unit =>
+                                unit.key ===
+                                found.key
+                        )
+                    ) {
+                        units.push(found);
+                    }
                 }
-
-                const key =
-                    match[1];
-
-                if (
-                    !units.some(
-                        u => u.key === key
-                    )
-                ) {
-
-                    units.push({
-                        key,
-                        icon: src,
-                        title:
-                            img.title ||
-                            img.alt ||
-                            key
-                    });
-                }
-            }
+            );
 
             if (
                 units.length >
@@ -341,8 +485,94 @@
             }
         }
 
+        /*
+         * Na mobilu v režimu "Web pro počítače" mohou být některé
+         * ikony v DOM skryté / vykreslené jinak. Proto seznam doplníme
+         * podle game_data daného světa.
+         */
+        const known =
+            getKnownUnitKeys();
+
+        if (
+            known.length >
+            best.length
+        ) {
+
+            const byKey =
+                new Map(
+                    best.map(
+                        unit => [
+                            unit.key,
+                            unit
+                        ]
+                    )
+                );
+
+            best =
+                known.map(key => {
+
+                    const existing =
+                        byKey.get(key);
+
+                    return (
+                        existing || {
+                            key,
+                            icon:
+                                unitIconFallback(
+                                    key
+                                ),
+                            title: key,
+                            cellIndex: null
+                        }
+                    );
+                });
+        }
+
         return best;
     }
+
+
+    function getTroopCells(
+        cells,
+        units,
+        fallbackStart
+    ) {
+
+        const mapped =
+            units.map(
+                unit =>
+                    Number.isInteger(
+                        unit.cellIndex
+                    )
+                        ? cells[
+                            unit.cellIndex
+                          ]
+                        : null
+            );
+
+        /*
+         * Absolutní mapování použijeme jen pokud jsou známé
+         * všechny sloupce a všechny existují i v datovém řádku.
+         */
+        if (
+            mapped.length ===
+                units.length &&
+            mapped.every(Boolean)
+        ) {
+            return mapped;
+        }
+
+        /*
+         * Fallback pro klasickou tabulku DK:
+         * jednotky jsou souvisle za popisným sloupcem.
+         */
+        return cells.slice(
+            fallbackStart,
+            fallbackStart +
+            units.length
+        );
+    }
+
 
     function detectRowType(cells) {
 
@@ -435,11 +665,10 @@
             }
 
             const troopCells =
-                cells.slice(
-                    detected.index + 1,
-                    detected.index +
-                    1 +
-                    units.length
+                getTroopCells(
+                    cells,
+                    units,
+                    detected.index + 1
                 );
 
             if (
@@ -609,9 +838,10 @@
             }
 
             const troopCells =
-                cells.slice(
-                    2,
-                    2 + units.length
+                getTroopCells(
+                    cells,
+                    units,
+                    2
                 );
 
             if (
@@ -987,7 +1217,7 @@
         <div class="dk-head">
 
             <span>
-                Stav vojska
+                Stav vojska – TEST 3.4
             </span>
 
             <button
