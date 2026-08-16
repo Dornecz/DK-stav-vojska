@@ -1,7 +1,7 @@
 (async function () {
     'use strict';
 
-    const SCRIPT_ID = 'dk-army-tool-v33';
+    const SCRIPT_ID = 'dk-army-tool-v331';
 
     const STORAGE_GROUP = 'dkArmyToolGroup';
     const STORAGE_TYPE = 'dkArmyToolType';
@@ -22,13 +22,44 @@
             .trim();
 
     const toNumber = s => {
-        const value =
+        let text =
             String(s || '')
-                .replace(/[^\d]/g, '');
+                .replace(/\u00a0/g, ' ')
+                .trim();
 
-        return value
-            ? parseInt(value, 10) || 0
-            : 0;
+        /*
+         * Některé účty DK zobrazují např.:
+         *
+         * 12215 (30)
+         * 0 (30)
+         *
+         * Číslo v závorce není počet jednotek
+         * a nesmí se přičíst.
+         */
+        text =
+            text.split('(')[0]
+                .trim();
+
+        /*
+         * Vezmeme pouze první číselnou hodnotu.
+         * Podporuje i formát 12 215.
+         */
+        const match =
+            text.match(
+                /\d[\d\s.]*/
+            );
+
+        if (!match) {
+            return 0;
+        }
+
+        return (
+            parseInt(
+                match[0]
+                    .replace(/[^\d]/g, ''),
+                10
+            ) || 0
+        );
     };
 
     const fmt = n =>
